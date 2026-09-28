@@ -5,98 +5,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drag&Drop App backup</title>
+    <title>Network Topology Creator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-
 </head>
 
 <body>
-    <div class="header-controls">
-        <div id="diagram-controls">
-            <label for="diagram-name">Diagram Name : </label>
-            <input type="text" id="diagram-name" placeholder="Enter Diagram Name">
-            <button id="erase-btn">Erase</button>
-            <button id="save-btn">Save Diagram</button>
-            <button id="load-btn">Load Diagram</button>
-            <select id="load-diagram-select" style="display: none;"></select>
-            <button id="delete-btn">Delete Diagram</button>
-            <button id="delete-selected-btn">Delete selected Shape</button>
-            <button id="duplicate-selected-btn">Duplicate selected Shape</button>
-            <button id="generate-script-btn">Generate Script</button>
-            <button id="assign-group-btn" disabled>Create Group and assign Propertiess</button>
-            <button id="add-pseudowire-btn">Add Pseudowire</button>
-
+    <!-- Top Header & Toolbar Controls -->
+    <header class="header-controls">
+        <div class="brand">
+            <span class="brand-icon">🌐</span>
+            <h1 class="brand-title">Topology Creator</h1>
         </div>
-    </div>
 
-    <div class="container">
-        <div id="shape-palette" class="palette">
-            <h2>Shapes Palette</h2>
-            <div class="draggable-shape" data-shape-type="rectangle">
+        <div id="diagram-controls">
+            <div class="input-group">
+                <label for="diagram-name">Diagram Name:</label>
+                <input type="text" id="diagram-name" placeholder="My_Network_1">
+            </div>
+
+            <div class="button-group">
+                <button id="erase-btn" title="Clear Canvas">🗑️ Clear</button>
+                <button id="save-btn" title="Save Diagram to Database">💾 Save</button>
+                <button id="load-btn" title="Load Saved Diagram">📂 Load</button>
+                <select id="load-diagram-select" style="display: none;"></select>
+                <button id="delete-btn" title="Delete Saved Diagram">❌ Delete Diagram</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="button-group">
+                <button id="delete-selected-btn" disabled title="Delete selected shape">Delete Selected</button>
+                <button id="duplicate-selected-btn" disabled title="Duplicate selected shape">Duplicate</button>
+                <button id="assign-group-btn" disabled title="Group selected devices connected by cable">Create Group & Properties</button>
+                <button id="add-pseudowire-btn" title="Connect 2 devices via Pseudowire">Add Pseudowire</button>
+                <button id="generate-script-btn" class="primary-btn" title="Generate & view topology JSON">Generate JSON</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="container">
+        <!-- Sidebar Palette -->
+        <aside id="shape-palette" class="palette">
+            <h2>Devices & Cables</h2>
+            <div class="draggable-shape" data-shape-type="rectangle" title="Add Computer / Host">
                 <svg width="60" height="40" viewBox="0 0 60 40">
-                    <rect x="5" y="5" width="50" height="30" fill="#a7f3d0" stroke="#059669" stroke-width="2" rx="5"
-                        ry="5" />
+                    <rect x="5" y="5" width="50" height="30" fill="#a7f3d0" stroke="#059669" stroke-width="2" rx="6" ry="6" />
                 </svg>
                 <span>Computer</span>
             </div>
-            <div class="draggable-shape" data-shape-type="circle">
+            <div class="draggable-shape" data-shape-type="circle" title="Add Router">
                 <svg width="60" height="40" viewBox="0 0 60 40">
                     <circle cx="30" cy="20" r="15" fill="#bae6fd" stroke="#0ea5e9" stroke-width="2" />
                 </svg>
                 <span>Router</span>
             </div>
-            <div class="draggable-shape" data-shape-type="triangle">
+            <div class="draggable-shape" data-shape-type="triangle" title="Add Switch">
                 <svg width="60" height="40" viewBox="0 0 60 40">
-                    <polygon points="30,5 55,35 5,35" fill="#ffd700" stroke="#daa520" stroke-width="2" />
+                    <polygon points="30,5 55,35 5,35" fill="#fef08a" stroke="#d97706" stroke-width="2" />
                 </svg>
                 <span>Switch</span>
             </div>
-            <div class="draggable-shape" data-shape-type="line-1g">
+
+            <div class="palette-divider"></div>
+
+            <div class="draggable-shape" data-shape-type="line-1g" title="Add 1G Ethernet Cable">
                 <svg width="60" height="40" viewBox="0 0 60 40">
-                    <line x1="5" y1="35" x2="55" y2="5" stroke="#fca5a5" stroke-width="2" />
+                    <line x1="5" y1="35" x2="55" y2="5" stroke="#ef4444" stroke-width="3" stroke-dasharray="0" />
                 </svg>
                 <span>1G Cable</span>
             </div>
-            <div class="draggable-shape" data-shape-type="line-10g">
+            <div class="draggable-shape" data-shape-type="line-10g" title="Add 10G Fiber Cable">
                 <svg width="60" height="40" viewBox="0 0 60 40">
-                    <line x1="5" y1="35" x2="55" y2="5" stroke="#92b0f7" stroke-width="2" />
+                    <line x1="5" y1="35" x2="55" y2="5" stroke="#3b82f6" stroke-width="3" />
                 </svg>
                 <span>10G Cable</span>
             </div>
-            <div class="draggable-shape" data-shape-type="ellipse">
-                <svg width="60" height="40" viewBox="0 0 60 40">
-                    <ellipse cx="30" cy="20" rx="10" ry="15" fill="#ffc107" stroke="#e0a800" stroke-width="2" />
-                </svg>
-                <span>Lag</span>
-            </div>
-            <div class="draggable-shape" data-shape-type="diamond">
-                <svg width="60" height="40" viewBox="0 0 60 40">
-                    <polygon points="25,5 50,20 25,35 0,20"fill="#6a5acd" stroke="##483d8b" stroke-width="2" 
-                    />
-                </svg>
-                <span>CFM</span>
-            </div>
-        </div>
 
-        <div id="drawing-canvas" class="canvas">
+            <div class="palette-divider"></div>
+
+            <div class="draggable-shape" data-shape-type="ellipse" title="Add Link Aggregation (LAG) Point">
+                <svg width="60" height="40" viewBox="0 0 60 40">
+                    <ellipse cx="30" cy="20" rx="12" ry="16" fill="#fde047" stroke="#ca8a04" stroke-width="2" />
+                </svg>
+                <span>LAG Point</span>
+            </div>
+            <div class="draggable-shape" data-shape-type="diamond" title="Add Connectivity Fault Management (CFM) Point">
+                <svg width="60" height="40" viewBox="0 0 60 40">
+                    <polygon points="30,5 55,20 30,35 5,20" fill="#c084fc" stroke="#7e22ce" stroke-width="2" />
+                </svg>
+                <span>CFM Point</span>
+            </div>
+        </aside>
+
+        <!-- Konva Canvas Container -->
+        <section id="drawing-canvas" class="canvas">
             <div id="konva-container"></div>
+            <div id="canvas-hint" class="canvas-hint">Drag or click palette items to add shapes. Connect cables by dragging blue endpoints.</div>
+        </section>
+    </main>
+
+    <!-- Footer Export Controls -->
+    <footer class="footer-controls">
+        <span class="footer-label">Export Diagram:</span>
+        <button id="export-png-btn">Export PNG</button>
+        <button id="export-jpg-btn">Export JPG</button>
+        <button id="export-pdf-btn">Export PDF</button>
+    </footer>
+
+    <!-- JSON Topology Preview Modal -->
+    <div id="json-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Topology JSON Data</h3>
+                <button id="close-json-modal-btn" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre><code id="json-preview-code"></code></pre>
+            </div>
+            <div class="modal-footer">
+                <button id="copy-json-btn" class="secondary-btn">📋 Copy to Clipboard</button>
+                <button id="download-json-btn" class="primary-btn">⬇️ Download JSON</button>
+            </div>
         </div>
     </div>
 
-    <div class="footer-controls">
-        <button id="export-png-btn">Export as PNG</button>
-        <button id="export-jpg-btn">Export as JPG</button>
-        <button id="export-pdf-btn">Export as PDF</button>
-    </div>
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="{% static 'js/script.js' %}"></script>
 </body>
 
 </html>
 
-<!-- External Libraries for Export Functionality -->
-<script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="{% static 'js/script.js' %}"></script>
-</body>
-
-</html>
 

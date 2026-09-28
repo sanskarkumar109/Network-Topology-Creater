@@ -4,14 +4,28 @@ let isDrawingLine = false;
 let startShape = null;
 let currentLine = null;
 
+const stageContainer = document.getElementById('drawing-canvas');
 const stage = new Konva.Stage({
     container: 'konva-container',
-    width: window.innerWidth - 200,
-    height: window.innerHeight - 100,
+    width: stageContainer ? stageContainer.clientWidth : window.innerWidth - 200,
+    height: stageContainer ? stageContainer.clientHeight : window.innerHeight - 100,
 });
 
 const layer = new Konva.Layer();
 stage.add(layer);
+
+function resizeStage() {
+    const container = document.getElementById('drawing-canvas');
+    if (container && stage) {
+        stage.width(container.clientWidth);
+        stage.height(container.clientHeight);
+        layer.draw();
+        if (typeof updateElementConnections === 'function') {
+            updateElementConnections();
+        }
+    }
+}
+window.addEventListener('resize', resizeStage);
 
 let canvasElements = [];
 let selectedShape = null;
@@ -840,83 +854,89 @@ function updateElementConnections() {
             const shape2 = elementMap.get(element.attrs.shape2Id);
             if (shape1 && shape2) {
                 element.points([shape1.x(), shape1.y(), shape2.x(), shape2.y()]);
+                const startHandle = canvasElements.find(el => el.name === 'lineHandle' && el.lineId === element.id() && el.handleType === 'start');
+                const endHandle = canvasElements.find(el => el.name === 'lineHandle' && el.lineId === element.id() && el.handleType === 'end');
+                if (startHandle) startHandle.position({ x: shape1.x(), y: shape1.y() });
+                if (endHandle) endHandle.position({ x: shape2.x(), y: shape2.y() });
             }
         }
     });
-    const container = document.getElementById('konva-conatiner');
-    canvasElements.forEach(element => {
-        if (!element || !['Rect', 'Circle', 'RegularPolygon'].includes(element.className)) return;
-        const pos = element.getAbsolutePosition();
-        const input = document.querySelector(`.shape-label-input[data-shape-id="${element.id()}"]`);
-        if (input) {
-            let shapeCenterX = pos.x;
-            let shapeBottomY = pos.y;
-            let offsetTop = 10;
-            let offsetLeft = 10;
 
-            if (element.className === 'Rect') {
-                shapeCenterX = pos.x + element.width() / 2;
-                shapeBottomY = pos.y + element.height();
-            } else if (element.className === 'Circle') {
-                shapeCenterX = pos.x;
-                shapeBottomY = pos.y + element.radius();
-                offsetLeft = -35;
-            } else if (element.className === 'RegularPolygon' && element.attrs.sides === 3) {
-                shapeCenterX = pos.x;
-                shapeBottomY = pos.y + element.radius();
-                offsetTop = 0;
-                offsetLeft = -40;
+    const container = document.getElementById('konva-container');
+    if (container) {
+        canvasElements.forEach(element => {
+            if (!element || !['Rect', 'Circle', 'RegularPolygon'].includes(element.className)) return;
+            const pos = element.getAbsolutePosition();
+            const input = container.querySelector(`.shape-label-input[data-shape-id="${element.id()}"]`);
+            if (input) {
+                let shapeCenterX = pos.x;
+                let shapeBottomY = pos.y;
+                let offsetTop = 10;
+                let offsetLeft = 10;
+
+                if (element.className === 'Rect') {
+                    shapeCenterX = pos.x + element.width() / 2;
+                    shapeBottomY = pos.y + element.height();
+                    offsetLeft = -40;
+                } else if (element.className === 'Circle') {
+                    shapeCenterX = pos.x;
+                    shapeBottomY = pos.y + element.radius();
+                    offsetLeft = -40;
+                } else if (element.className === 'RegularPolygon' && element.attrs.sides === 3) {
+                    shapeCenterX = pos.x;
+                    shapeBottomY = pos.y + element.radius();
+                    offsetTop = 0;
+                    offsetLeft = -40;
+                }
+                input.style.top = `${shapeBottomY + offsetTop}px`;
+                input.style.left = `${shapeCenterX + offsetLeft}px`;
             }
-            input.style.top = `${shapeBottomY + offsetTop}px`;
-            input.style.left = `${shapeCenterX + offsetLeft}px`;
-        }
-    });
+        });
+    }
     layer.draw();
 }
 
-function createPseudowirePopup(startShape,endShape){
-    const container = document.getElementById('konva-conatiner');
+function createPseudowirePopup(startShape, endShape) {
+    const container = document.getElementById('konva-container');
+    if (!container) return;
     const popup = document.createElement('div');
     popup.className = 'popup';
     popup.innerHTML = `
     <div class="popup-content">
-    <form id="pseudowire-properties">
-        <h3>PseudoWire Properties</h3>
-        <label for="protocol-input">Protocol : </label>
-        <input type="text" id="protocol-input" required>
-        <br>
-        <br>
-        <label for="service-input">Emulated Service : </label>
-        <input type="text" id="service-input">
-        <br>
-        <br>
-        <label for="Label-input">MPLS Label : </label>
-        <input type="number" id="Label-input">
-        <br>
-        <br>
-        <button type="submit">Create PseudoWire</button>
-        <button class="close-btn">Close</button>
-    </form>
+        <form id="pseudowire-properties">
+            <h3>Pseudowire Properties</h3>
+            <label for="pw-protocol-input">Protocol:</label>
+            <input type="text" id="pw-protocol-input" placeholder="e.g. L2TPv3" required>
+            <label for="pw-service-input">Emulated Service:</label>
+            <input type="text" id="pw-service-input" placeholder="e.g. Ethernet">
+            <label for="pw-label-input">MPLS Label:</label>
+            <input type="number" id="pw-label-input" placeholder="1001">
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button type="submit" class="primary-btn">Create Pseudowire</button>
+                <button type="button" class="close-btn secondary-btn">Cancel</button>
+            </div>
+        </form>
     </div>
     `;
     container.appendChild(popup);
     const form = popup.querySelector('#pseudowire-properties');
-    form.addEventListener('submit',(e)=>{
+    form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const protocol = document.getElementById('protocol-input').value;
-        const service = document.getElementById('service-input').value;
-        const label = document.getElementById('label-input').value;
+        const protocol = popup.querySelector('#pw-protocol-input').value;
+        const service = popup.querySelector('#pw-service-input').value;
+        const label = popup.querySelector('#pw-label-input').value;
 
-        createPseudowire(startShape,endShape,{
-            protocol:protocol,
+        createPseudowire(startShape, endShape, {
+            protocol: protocol,
             emulatedService: service,
             mplsLabel: label,
         });
         popup.remove();
         selectedShapes = [];
+        updateUI();
         layer.draw();
     });
-    popup.querySelector('.close-btn').addEventListener('click',() => popup.remove());
+    popup.querySelector('.close-btn').addEventListener('click', () => popup.remove());
 }
 
 function createPseudowire(startShape,endShape,properties){
@@ -948,6 +968,15 @@ document.getElementById('add-pseudowire-btn').addEventListener('click',()=>{
     }
 })
 
+function showJSONModal(jsonString) {
+    const modal = document.getElementById('json-modal');
+    const preview = document.getElementById('json-preview-code');
+    if (modal && preview) {
+        preview.textContent = jsonString;
+        modal.style.display = 'flex';
+    }
+}
+
 function generateTopologyJSON() {
     const topology = {
         groups: [],
@@ -957,16 +986,12 @@ function generateTopologyJSON() {
     const lagPoints = canvasElements.filter(el => el.name === 'lagPoint');
     const cfmPoints = canvasElements.filter(el => el.name === 'cfmPoint');
 
-    console.log("Found lines : ",lines);
-    console.log("Found lag points ",lagPoints);
-    console.log("found cfm points : ",cfmPoints);
-
     groups.forEach(group => {
         const groupShapes = shapes.filter(s => s.groupIds && s.groupIds.includes(group.id)).map(s => s.customId);
         const groupConnections = lines.filter(line => {
             const shape1 = shapes.find(s => s.id() === line.attrs.shape1Id);
             const shape2 = shapes.find(s => s.id() === line.attrs.shape2Id);
-            if(line.attrs.name === 'pseudowire'){
+            if (line.attrs.name === 'pseudowire') {
                 return shape1 && shape2 && shape1.groupIds && shape1.groupIds.includes(group.id) && shape2.groupIds && shape2.groupIds.includes(group.id);
             }
             return shape1 && shape2 && shape1.groupIds && shape1.groupIds.includes(group.id) && shape2.groupIds && shape2.groupIds.includes(group.id) && line.attrs.cabelType === group.properties.cabelType;
@@ -984,23 +1009,21 @@ function generateTopologyJSON() {
                 relativePosition: cp.getAttr('relativePosition')
             }));
 
-            if(line.attrs.name === 'pseudowire'){
-                return{
-                    from : shape1.customId,
-                    to : shape2.customId,
-                    type : 'pseudowire',
-                    properties : line.attrs.properties,
+            if (line.attrs.name === 'pseudowire') {
+                return {
+                    from: shape1 ? shape1.customId : 'unknown',
+                    to: shape2 ? shape2.customId : 'unknown',
+                    type: 'pseudowire',
+                    properties: line.attrs.properties,
                 };
             }
 
-            console.log(`Line ${line.id()} has lag points : `,lineLagpoints);
-            console.log(`line ${line.id()} has cfm points : `,linecfmpoints);
             const connection = {
-                from: shape1.customId,
-                to: shape2.customId,
+                from: shape1 ? shape1.customId : 'unknown',
+                to: shape2 ? shape2.customId : 'unknown',
             };
-            const linepoints = [...lineLagpoints,...linecfmpoints];
-            if(linepoints.length > 0){
+            const linepoints = [...lineLagpoints, ...linecfmpoints];
+            if (linepoints.length > 0) {
                 connection.linePoints = linepoints;
             }
             return connection;
@@ -1016,8 +1039,7 @@ function generateTopologyJSON() {
     });
 
     const jsonoutput = JSON.stringify(topology, null, 2);
-    console.log(jsonoutput);
-    alert('Topology JSON generated', jsonoutput);
+    showJSONModal(jsonoutput);
     return jsonoutput;
 }
 
@@ -1378,7 +1400,7 @@ function getCookie(name) {
     return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
 }
 
-// DOMContentLoaded Event Listener
+// DOMContentLoaded Event Listener & Handlers
 window.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.draggable-shape').forEach((item) => {
         const type = item.dataset.shapeType;
@@ -1390,4 +1412,58 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         item.addEventListener('dblclick', handleAdd);
     });
+
+    // JSON Preview Modal Handlers
+    const modal = document.getElementById('json-modal');
+    const closeBtn = document.getElementById('close-json-modal-btn');
+    const copyBtn = document.getElementById('copy-json-btn');
+    const downloadBtn = document.getElementById('download-json-btn');
+
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        });
+    }
+
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            const code = document.getElementById('json-preview-code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const origText = copyBtn.textContent;
+                copyBtn.textContent = '✅ Copied!';
+                setTimeout(() => { copyBtn.textContent = origText; }, 2000);
+            });
+        });
+    }
+
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            const code = document.getElementById('json-preview-code').textContent;
+            const blob = new Blob([code], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${document.getElementById('diagram-name').value.trim() || 'topology'}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    // Keyboard Shortcuts (Delete Key)
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
+                return;
+            }
+            const delSelectedBtn = document.getElementById('delete-selected-btn');
+            if (delSelectedBtn && !delSelectedBtn.disabled) {
+                delSelectedBtn.click();
+            }
+        }
+    });
 });
+
